@@ -1,0 +1,10 @@
+bin/*
+examples/*.cc~
+include/*.h~
+obj/*
+src/*.cc~
+Makefile~
+README.md~
+
+
+!.gitkeep
