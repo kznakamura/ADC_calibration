@@ -1,29 +1,29 @@
-//#include "FebReader.hh"
-//#include "MyFunction.hh"
 #include <iostream>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include <TFile.h>
 #include <TTree.h>
 #include <TSystem.h>
 #include <TH1.h>
 #include <TF1.h>
+#include <TCanvas.h>
 
 using namespace std;
 
 class Analizer{
 public:
-  Analizer(string input_oscillodir, 
-	   string output_filename,
+  Analizer(string input_filename, 
+	   string output_dir,
 	   bool is_debug = false);
 
 private:
   string m_input_filename;
-  string m_output_filename;
+  string m_output_dir;
   bool m_is_debug;
 
-  int board_id_list[3] = {1, 2, 17};
+  int board_id_list[3] = {1, 17, 2};
 
   //==== branch for adc_calibration_tree ====//
   int m_board_id;
@@ -35,9 +35,6 @@ private:
   double m_high_fit_ndf;
   double m_low_fit_ndf;
 
-  //double m_high_integral_event;
-  //double m_low_integral_event;
-
   //==== branch for adc_calibration_header ====//
   int m_high_histrange_min = 0, m_high_histrange_max = 60e3;
   int m_low_histrange_min = 0, m_low_histrange_max = 500;
@@ -45,15 +42,18 @@ private:
 };
 
 Analizer::Analizer(string input_filename,
-		   string output_filename,
+		   string output_dir,
 		   bool is_debug){
 
   m_input_filename = input_filename;
-  m_output_filename = output_filename;
+  m_output_dir = output_dir;
   m_is_debug = is_debug;
 
+  string output_filename = m_output_dir + "/adc_calibration.root";
+  cout << "output_filename=" << output_filename << endl;
+
   TFile *ifile = new TFile(m_input_filename.c_str());
-  TFile *ofile = new TFile(m_output_filename.c_str(), "recreate");
+  TFile *ofile = new TFile(output_filename.c_str(), "recreate");
   TTree *adc_integral_header = (TTree*)ifile -> Get("adc_integral_header") -> Clone();
   TTree *adc_integral_tree = (TTree*)ifile -> Get("adc_integral_tree");
   adc_integral_header -> Write();
@@ -75,7 +75,7 @@ Analizer::Analizer(string input_filename,
   adc_calibration_tree -> Branch("low_fit_chisq", &m_low_fit_chisq);
   adc_calibration_tree -> Branch("high_fit_ndf", &m_high_fit_ndf);
   adc_calibration_tree -> Branch("low_fit_ndf", &m_low_fit_ndf);
-
+  
   
   for(auto id : board_id_list){
     int maxch = adc_integral_tree -> GetMaximum("ch") + 1;
@@ -148,7 +148,7 @@ Analizer::Analizer(string input_filename,
       m_low_fit_ndf = f_low_integral -> GetNDF();
       
       adc_calibration_tree -> Fill();
-
+      
       delete h_high_integral;
       delete h_low_integral;
       delete f_high_integral;
@@ -156,13 +156,15 @@ Analizer::Analizer(string input_filename,
     }
   }
 
+
+
   adc_calibration_tree -> Write();
   ofile -> Close();
 }
 
 int main(int argc, char* argv[]){
   if(argc!=3){
-    cout << "Usage: " 
+    cout << "# Usage: " 
 	 << argv[0]
 	 << " [path/to/adc_integral.root] [path/to/outputdir/]"
 	 << endl;
@@ -170,12 +172,11 @@ int main(int argc, char* argv[]){
   }
   string input_filename = argv[1];
   string output_dir = argv[2];
+  output_dir += "/";
   bool is_debug = true;
 
-  string output_filename = output_dir + "adc_calibration.root";
-
   Analizer *anal = new Analizer(input_filename,
-  				output_filename,
+  				output_dir,
 				is_debug);
   
   delete anal;
